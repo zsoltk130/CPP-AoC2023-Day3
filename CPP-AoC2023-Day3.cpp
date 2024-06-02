@@ -7,6 +7,7 @@
 #include <string>
 #include <fstream>
 #include <set>
+#include <regex>
 
 struct Symbol
 {
@@ -34,79 +35,182 @@ std::vector<std::string> readLinesFromFile(const std::string& filename) {
     return lines;
 }
 
-std::vector<int> findAdjacentNumbers(std::vector<Symbol> symbols, std::vector<std::string>& schematic)
+// FOR DEBUG
+void writeVectorToFile(const std::vector<std::string>& vec, const std::string& filename) {
+    // Create an ofstream object to open the file
+    std::ofstream outfile(filename);
+
+    // Check if the file is open
+    if (!outfile.is_open()) {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return;
+    }
+
+    // Write each string in the vector to the file
+    for (const auto& str : vec) {
+        outfile << str << std::endl;
+    }
+
+    // Close the file
+    outfile.close();
+
+    // Inform the user that writing is complete
+    std::cout << "Data written to file: " << filename << std::endl;
+}
+
+int findCompleteNumber(std::vector<std::string>& schematic, int posX, int posY, char symbol)
 {
-    std::vector<int> nums;
-    
-    // The boundary of the search area
-    // 
-    //  x: 0123456789
-    // y0: ....401...
-    // y1: ...*......
-    // y2: ..159.....
-    // y3: ..........
-    //
-    // specialCharacterPosition: x3y1
-    // searchAreaBounds: x3+xLeftOffset; x3+xRightOffset; y1+yTopOffset; y1+yBottomOffset
-    //                 = x0            ; x6             ; y0           ; y2
-    //
-    //  x: 0123456789
-    // y0: ####401...
-    // y1: ###*###...
-    // y2: ##159##...
-    // y3: ..........
-    // 
-    // adjacentNums: 401, 159
+    int currentPosX = posX; //posX
+    int currentPosY = posY; //posY
 
-    int xLeftOffset = -3;
-    int xRightOffset = 3;
-    int yTopOffset = -1;
-    int yBottomOffset = 1;
+    int minSize = 0;
+    int maxSize = schematic.size();
 
-    int schematicSizeX = schematic[0].size();
-    int schematicSizeY = schematic.size();
+    std::string currentLine = schematic[currentPosY];
+    char currentChar = currentLine[currentPosX];
+
+    std::string number;
+
+    while (true)
+    {
+        if (currentPosX == 0)
+        {
+            break;
+        }
+        char previousChar = currentLine[currentPosX - 1];
+        if (!isdigit(previousChar))
+        {
+            break;
+        }
+        currentChar = currentLine[--currentPosX];
+    }
+
+    while (true)
+    {
+        char nextChar = currentLine[currentPosX + 1];
+        number += currentChar;
+        schematic[currentPosY][currentPosX] = 'F'; // FOR DEBUG (replaces all "spent" numbers with F's in the vector to be printed and visually analysed)
+
+        if (!isdigit(nextChar))
+        {
+            break;
+        }
+        currentChar = currentLine[++currentPosX];
+    }
+    return stoi(number);
+}
+
+int findAdjacentNumbers(std::vector<Symbol>& symbols, std::vector<std::string>& schematic)
+{
+    // Adjacent number search logic:
+    // 
+    //  x0123456789
+    //y
+    //0  ....401...
+    //1  ...*......
+    //2  ..159.....
+    //
+    // Find symbol xy position
+    //  x0123456789
+    //y
+    //0  ....401...
+    //1  ...X......
+    //2  ..159.....
+    //
+    // Search 1 character around symbol until digit found
+    //  x0123456789
+    //y
+    //0  ...X401...
+    //1  ...*......
+    //2  ..159.....
+    //
+    //  x0123456789
+    //y
+    //0  ....X01...
+    //1  ...*......
+    //2  ..159.....
+    // When digit found go all the way to the left until '.' found, then go right one characater at a time and record the number until the other '.' is found
+    //  x0123456789
+    //y
+    //0  ....XXX...
+    //1  ...*......
+    //2  ..159.....
+    //
+    // Continue searching around the symbol one character at a time
+    //  x0123456789
+    //y
+    //0  ....401...
+    //1  ..X*X.....
+    //2  ..159.....
+    // 
+    // When digit found go all the way to the left one digit at a time, then right one digit at a time recording the whole number left to right
+    //  x0123456789
+    //y
+    //0  ....401...
+    //1  ...*......
+    //2  ..XXX.....
+    // 
+    // And continue to the next symbol xy position
     
-    std::string selection;
+    int total = 0;
+
+    int schematicXSize = schematic[0].size();
+    int schematicYSize = schematic.size();
 
     for (auto symbol : symbols)
     {
-        int xLeftBoundary = ((symbol.posX + xLeftOffset) < 0) ? 0 : (symbol.posX + xLeftOffset);
-        int xRightBoundary = ((symbol.posX + xRightOffset) > schematicSizeX) ? schematicSizeX : (symbol.posX + xRightOffset);
-        int yTopBoundary = ((symbol.posY + yTopOffset) < 0) ? 0 : (symbol.posY + yTopOffset);
-        int yBottomBoundary = ((symbol.posY + yBottomOffset) > schematicSizeY) ? schematicSizeY : (symbol.posY + yBottomOffset);
+        int x = symbol.posX;
+        int y = symbol.posY;
+        
+        std::string currentLine = schematic[y];
+        char currentChar = currentLine[x];
 
-        int selectionSize = (xRightBoundary - xLeftBoundary) + 1;
+        int xMin = x - 1;
+        int xMax = x + 1;
+        int yMin = y - 1;
+        int yMax = y + 1;
 
-        for (int yPos = yTopBoundary; yPos <= yBottomBoundary; yPos++)
+        for (int i = yMin; i <= yMax; i++)
         {
-            std::string line = schematic[yPos];
-            selection = line.substr(xLeftBoundary, selectionSize);
+            currentLine = schematic[i];
+            for (int j = xMin; j <= xMax; j++)
+            {
+                currentChar = currentLine[j];
+                if (isdigit(currentChar))
+                {
+                    char s = symbol.symbol;
+                    int num = findCompleteNumber(schematic, j, i, s);
+                    total += num;
+
+
+                    break;
+                }
+            }
         }
-            
     }
     
-    return nums;
+    return total;
 }
 
 std::vector<Symbol> findSymbolPositions(std::vector<std::string>& schematic)
 {
     std::vector<Symbol> symbolPositions;
    
-    int schematicRowSize = schematic[0].size(); // Vector width
-    int schematicColSize = schematic.size(); // Vector height
+    int schematicXSize = schematic[0].size(); // Vector width
+    int schematicYSize = schematic.size(); // Vector height
 
     std::set<char> symbols = { '*', '%', '#', '@', '+', '-', '=', '/', '&', '$' };
 
-    for (int posY = 0; posY < schematicRowSize; posY++) // Y-Axis
+    for (int posY = 0; posY < schematicYSize; posY++) // Y-Axis
     {
-        for (int posX = 0; posX < schematicColSize; posX++) // X-Axis
+        for (int posX = 0; posX < schematicXSize; posX++) // X-Axis
         {
             std::string row = schematic[posY];
-            char c = row[posX];
+            char symbol = row[posX];
             
-            if (symbols.find(c) != symbols.end()) {
+            if (symbols.find(symbol) != symbols.end()) {
                 Symbol s;
-                s.symbol = c;
+                s.symbol = symbol;
                 s.posX = posX;
                 s.posY = posY;
                 
@@ -120,8 +224,12 @@ std::vector<Symbol> findSymbolPositions(std::vector<std::string>& schematic)
 int main()
 {
     std::string filename = "aoc3.txt";
+    std::string outfile = "aoc3debug.txt"; // FOR DEBUG
+    std::vector<int> numbers;
     std::vector<std::string> schematic = readLinesFromFile(filename);
     std::vector<Symbol> symbols = findSymbolPositions(schematic);
-    std::vector<int> nums = findAdjacentNumbers(symbols, schematic);
+    int total = findAdjacentNumbers(symbols, schematic);
+
+    writeVectorToFile(schematic, outfile); // FOR DEBUG
 	return 0;
 }
