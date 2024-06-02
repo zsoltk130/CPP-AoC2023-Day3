@@ -100,7 +100,7 @@ int findCompleteNumber(std::vector<std::string>& schematic, int posX, int posY)
     return stoi(number);
 }
 
-int findAdjacentNumbers(std::vector<Symbol>& symbols, std::vector<std::string>& schematic)
+void findAdjacentNumbers(std::vector<Symbol> symbols, std::vector<std::string> schematic, std::vector<int>& numbers)
 {
     // Adjacent number search logic:
     // 
@@ -164,11 +164,9 @@ int findAdjacentNumbers(std::vector<Symbol>& symbols, std::vector<std::string>& 
     //1  ...*......
     //2  ..XXX.....
     // =>159
-    // 
+    //
     // And continue to the next symbol xy position
     
-    int total = 0;
-
     for (auto symbol : symbols)
     {
         int x = symbol.posX;
@@ -213,15 +211,13 @@ int findAdjacentNumbers(std::vector<Symbol>& symbols, std::vector<std::string>& 
 
                     if (!sameNumber)
                     {
-                        total += num;
+                        numbers.push_back(num);
                         sameNumber = true;
                     }
                 }
             }
         }
     }
-    
-    return total;
 }
 
 std::vector<Symbol> findSymbolPositions(std::vector<std::string>& schematic)
@@ -253,6 +249,16 @@ std::vector<Symbol> findSymbolPositions(std::vector<std::string>& schematic)
     return symbolPositions;
 }
 
+int findSum(std::vector<int> numbers)
+{
+    int total = 0;
+    for (int number : numbers)
+    {
+        total += number;
+    }
+    return total;
+}
+
 int main()
 {
     std::string filename = "aoc3.txt";
@@ -260,7 +266,8 @@ int main()
     std::vector<int> numbers;
     std::vector<std::string> schematic = readLinesFromFile(filename);
     std::vector<Symbol> symbols = findSymbolPositions(schematic);
-    int total = findAdjacentNumbers(symbols, schematic);
+    findAdjacentNumbers(symbols, schematic, numbers);
+    int total = findSum(numbers);
 
     // writeVectorToFile(schematic, outfile); // FOR DEBUG
 	return 0;
