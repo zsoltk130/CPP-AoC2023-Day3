@@ -58,7 +58,7 @@ void writeVectorToFile(const std::vector<std::string>& vec, const std::string& f
     std::cout << "Data written to file: " << filename << std::endl;
 }
 
-int findCompleteNumber(std::vector<std::string>& schematic, int posX, int posY, char symbol)
+int findCompleteNumber(std::vector<std::string>& schematic, int posX, int posY)
 {
     int currentPosX = posX; //posX
     int currentPosY = posY; //posY
@@ -89,7 +89,7 @@ int findCompleteNumber(std::vector<std::string>& schematic, int posX, int posY, 
     {
         char nextChar = currentLine[currentPosX + 1];
         number += currentChar;
-        schematic[currentPosY][currentPosX] = 'F'; // FOR DEBUG (replaces all "spent" numbers with F's in the vector to be printed and visually analysed)
+        // schematic[currentPosY][currentPosX] = 'F'; // FOR DEBUG (replaces all "spent" numbers with F's in the vector to be printed and visually analysed)
 
         if (!isdigit(nextChar))
         {
@@ -110,33 +110,46 @@ int findAdjacentNumbers(std::vector<Symbol>& symbols, std::vector<std::string>& 
     //1  ...*......
     //2  ..159.....
     //
-    // Find symbol xy position
+    // 1. Find symbol xy position
+    // 
     //  x0123456789
     //y
     //0  ....401...
     //1  ...X......
     //2  ..159.....
     //
-    // Search 1 character around symbol until digit found
+    // 2. Search 1 character around symbol until digit found starting from top left
+    // 
+    //  x0123456789
+    //y
+    //0  ..X.401...
+    //1  ...*......
+    //2  ..159.....
+    //
     //  x0123456789
     //y
     //0  ...X401...
     //1  ...*......
     //2  ..159.....
-    //
+    // 
     //  x0123456789
     //y
     //0  ....X01...
     //1  ...*......
     //2  ..159.....
-    // When digit found go all the way to the left until '.' found, then go right one characater at a time and record the number until the other '.' is found
+    // 
+    // When digit found use findCompleteNumber -> go all the way to the left until '.' found, then go right one 
+    // character at a time and record the number until the other '.' is found
+    // 
     //  x0123456789
     //y
     //0  ....XXX...
     //1  ...*......
     //2  ..159.....
+    // =>401
     //
-    // Continue searching around the symbol one character at a time
+    // Continue searching around the symbol one character at a time left to right
+    // 
     //  x0123456789
     //y
     //0  ....401...
@@ -144,46 +157,65 @@ int findAdjacentNumbers(std::vector<Symbol>& symbols, std::vector<std::string>& 
     //2  ..159.....
     // 
     // When digit found go all the way to the left one digit at a time, then right one digit at a time recording the whole number left to right
+    // 
     //  x0123456789
     //y
     //0  ....401...
     //1  ...*......
     //2  ..XXX.....
+    // =>159
     // 
     // And continue to the next symbol xy position
     
     int total = 0;
-
-    int schematicXSize = schematic[0].size();
-    int schematicYSize = schematic.size();
 
     for (auto symbol : symbols)
     {
         int x = symbol.posX;
         int y = symbol.posY;
         
-        std::string currentLine = schematic[y];
-        char currentChar = currentLine[x];
-
+        // Define adjacent area to symbol
         int xMin = x - 1;
         int xMax = x + 1;
         int yMin = y - 1;
         int yMax = y + 1;
+        
+        std::string currentLine = schematic[y];
+        char currentChar = currentLine[x];
+        char previousChar;
+        char nextChar;
 
-        for (int i = yMin; i <= yMax; i++)
+        // Flag is set when we are looping over a number that we've already found
+        // Flag is reset when we pass over a '.' or any of the other special chars
+        // This is for cases when the surrounding area around the symbol looks like (or similar):
+        // 
+        // 3.4
+        // .#5
+        // 46.
+        bool sameNumber = false;
+
+        for (y = yMin; y <= yMax; y++)
         {
-            currentLine = schematic[i];
-            for (int j = xMin; j <= xMax; j++)
+            currentLine = schematic[y];
+            sameNumber = false;
+            for (x = xMin; x <= xMax; x++)
             {
-                currentChar = currentLine[j];
-                if (isdigit(currentChar))
+                currentChar = currentLine[x];
+                if (!isdigit(currentChar))
+                {
+                    sameNumber = false;
+                }
+
+                if (isdigit(currentChar) && !sameNumber)
                 {
                     char s = symbol.symbol;
-                    int num = findCompleteNumber(schematic, j, i, s);
-                    total += num;
+                    int num = findCompleteNumber(schematic, x, y);
 
-
-                    break;
+                    if (!sameNumber)
+                    {
+                        total += num;
+                        sameNumber = true;
+                    }
                 }
             }
         }
@@ -224,12 +256,12 @@ std::vector<Symbol> findSymbolPositions(std::vector<std::string>& schematic)
 int main()
 {
     std::string filename = "aoc3.txt";
-    std::string outfile = "aoc3debug.txt"; // FOR DEBUG
+    // std::string outfile = "aoc3debug.txt"; // FOR DEBUG
     std::vector<int> numbers;
     std::vector<std::string> schematic = readLinesFromFile(filename);
     std::vector<Symbol> symbols = findSymbolPositions(schematic);
     int total = findAdjacentNumbers(symbols, schematic);
 
-    writeVectorToFile(schematic, outfile); // FOR DEBUG
+    // writeVectorToFile(schematic, outfile); // FOR DEBUG
 	return 0;
 }
