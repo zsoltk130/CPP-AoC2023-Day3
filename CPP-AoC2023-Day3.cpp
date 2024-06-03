@@ -62,14 +62,12 @@ void writeVectorToFile(const std::vector<std::string>& vec, const std::string& f
 // then looping all the way to the right until '.' or any other non digit is found and record the number (from left to right)
 int findCompleteNumber(const std::vector<std::string>& schematic, int posX, int posY)
 {
-    int minSize = 0;
-    int maxSize = schematic.size();
-
     std::string currentLine = schematic[posY];
     char currentChar = currentLine[posX];
 
     std::string number;
 
+    // Go left until '.' or special char
     while (true)
     {
         if (posX == 0)
@@ -84,6 +82,7 @@ int findCompleteNumber(const std::vector<std::string>& schematic, int posX, int 
         currentChar = currentLine[--posX];
     }
 
+    // Go right and add each number char to the number string variable until '.' or special char
     while (true)
     {
         char nextChar = currentLine[posX + 1];
@@ -96,6 +95,8 @@ int findCompleteNumber(const std::vector<std::string>& schematic, int posX, int 
         }
         currentChar = currentLine[++posX];
     }
+
+    // Convert number string to int before returning it
     return stoi(number);
 }
 
@@ -271,7 +272,7 @@ int runPartOne(const std::string& filename)
 
     std::vector<std::string> schematic = readLinesFromFile(filename);
     std::vector<Symbol> symbols = findSymbolPositions(schematic);
-    for (auto symbol : symbols)
+    for (auto& symbol : symbols)
     {
         int symbolPosX = symbol.posX;
         int symbolPosY = symbol.posY;
@@ -293,7 +294,7 @@ int runPartTwo(const std::string& filename)
 
     std::vector<std::string> schematic = readLinesFromFile(filename);
     std::vector<Symbol> symbols = findSymbolPositions(schematic);
-    for (auto symbol : symbols)
+    for (auto& symbol : symbols)
     {
         int symbolPosX = symbol.posX;
         int symbolPosY = symbol.posY;
