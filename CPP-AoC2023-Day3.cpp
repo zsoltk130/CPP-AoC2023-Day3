@@ -58,49 +58,49 @@ void writeVectorToFile(const std::vector<std::string>& vec, const std::string& f
     std::cout << "Data written to file: " << filename << std::endl;
 }
 
-int findCompleteNumber(std::vector<std::string>& schematic, int posX, int posY)
+// Finds the whole number that is adjacent to a special character by looping all the way left until '.' or any other non digit is found
+// then looping all the way to the right until '.' or any other non digit is found and record the number (from left to right)
+int findCompleteNumber(const std::vector<std::string>& schematic, int posX, int posY)
 {
-    int currentPosX = posX; //posX
-    int currentPosY = posY; //posY
-
     int minSize = 0;
     int maxSize = schematic.size();
 
-    std::string currentLine = schematic[currentPosY];
-    char currentChar = currentLine[currentPosX];
+    std::string currentLine = schematic[posY];
+    char currentChar = currentLine[posX];
 
     std::string number;
 
     while (true)
     {
-        if (currentPosX == 0)
+        if (posX == 0)
         {
             break;
         }
-        char previousChar = currentLine[currentPosX - 1];
+        char previousChar = currentLine[posX - 1];
         if (!isdigit(previousChar))
         {
             break;
         }
-        currentChar = currentLine[--currentPosX];
+        currentChar = currentLine[--posX];
     }
 
     while (true)
     {
-        char nextChar = currentLine[currentPosX + 1];
+        char nextChar = currentLine[posX + 1];
         number += currentChar;
-        // schematic[currentPosY][currentPosX] = 'F'; // FOR DEBUG (replaces all "spent" numbers with F's in the vector to be printed and visually analysed)
+        // schematic[posY][posX] = 'F'; // FOR DEBUG (replaces all "spent" numbers with F's in the vector to be printed and visually analysed)
 
         if (!isdigit(nextChar))
         {
             break;
         }
-        currentChar = currentLine[++currentPosX];
+        currentChar = currentLine[++posX];
     }
     return stoi(number);
 }
 
-void findAdjacentNumbers(std::vector<Symbol> symbols, std::vector<std::string> schematic, std::vector<int>& numbers)
+// Finds numbers which are adjacent to special characters
+void findAdjacentNumbers(const std::vector<std::string> &schematic, int x, int y, std::vector<int>& numbers)
 {
     // Adjacent number search logic:
     // 
@@ -167,60 +167,53 @@ void findAdjacentNumbers(std::vector<Symbol> symbols, std::vector<std::string> s
     //
     // And continue to the next symbol xy position
     
-    for (auto symbol : symbols)
+
+    // Define adjacent area to symbol
+    int xMin = x - 1;
+    int xMax = x + 1;
+    int yMin = y - 1;
+    int yMax = y + 1;
+        
+    std::string currentLine = schematic[y];
+    char currentChar = currentLine[x];
+
+    // Flag is set when we are looping over a number that we've already found
+    // Flag is reset when we pass over a '.' or any of the other special chars
+    // This is for cases when the surrounding area around the symbol looks like (or similar):
+    // 
+    // 3.4
+    // .#5
+    // 46.
+    bool sameNumber = false;
+
+    for (y = yMin; y <= yMax; y++)
     {
-        int x = symbol.posX;
-        int y = symbol.posY;
-        
-        // Define adjacent area to symbol
-        int xMin = x - 1;
-        int xMax = x + 1;
-        int yMin = y - 1;
-        int yMax = y + 1;
-        
-        std::string currentLine = schematic[y];
-        char currentChar = currentLine[x];
-        char previousChar;
-        char nextChar;
-
-        // Flag is set when we are looping over a number that we've already found
-        // Flag is reset when we pass over a '.' or any of the other special chars
-        // This is for cases when the surrounding area around the symbol looks like (or similar):
-        // 
-        // 3.4
-        // .#5
-        // 46.
-        bool sameNumber = false;
-
-        for (y = yMin; y <= yMax; y++)
+        currentLine = schematic[y];
+        sameNumber = false;
+        for (x = xMin; x <= xMax; x++)
         {
-            currentLine = schematic[y];
-            sameNumber = false;
-            for (x = xMin; x <= xMax; x++)
+            currentChar = currentLine[x];
+            if (!isdigit(currentChar))
             {
-                currentChar = currentLine[x];
-                if (!isdigit(currentChar))
-                {
-                    sameNumber = false;
-                }
+                sameNumber = false;
+            }
 
-                if (isdigit(currentChar) && !sameNumber)
-                {
-                    char s = symbol.symbol;
-                    int num = findCompleteNumber(schematic, x, y);
+            if (isdigit(currentChar) && !sameNumber)
+            {
+                int num = findCompleteNumber(schematic, x, y);
 
-                    if (!sameNumber)
-                    {
-                        numbers.push_back(num);
-                        sameNumber = true;
-                    }
+                if (!sameNumber)
+                {
+                    numbers.push_back(num);
+                    sameNumber = true;
                 }
             }
         }
     }
 }
 
-std::vector<Symbol> findSymbolPositions(std::vector<std::string>& schematic)
+// Loops through schematic line by line, left to right and stores the symbol, x and y position in a vector of structs when found
+std::vector<Symbol> findSymbolPositions(const std::vector<std::string>& schematic)
 {
     std::vector<Symbol> symbolPositions;
    
@@ -249,13 +242,76 @@ std::vector<Symbol> findSymbolPositions(std::vector<std::string>& schematic)
     return symbolPositions;
 }
 
-int findSum(std::vector<int> numbers)
+int findSum(const std::vector<int>& partNumbers)
 {
     int total = 0;
-    for (int number : numbers)
+    for (int number : partNumbers)
     {
         total += number;
     }
+    return total;
+}
+
+int findProduct(const std::vector<int>& partNumbers)
+{
+    int total = 1;
+    for (int partNumber : partNumbers)
+    {
+        total *= partNumber;
+    }
+    return total;
+}
+
+// Finds sum of all part numbers which are adjacent to a special character
+int runPartOne(const std::string& filename)
+{
+    std::vector<int> partNumbers;
+
+    int total = 0;
+
+    std::vector<std::string> schematic = readLinesFromFile(filename);
+    std::vector<Symbol> symbols = findSymbolPositions(schematic);
+    for (auto symbol : symbols)
+    {
+        int symbolPosX = symbol.posX;
+        int symbolPosY = symbol.posY;
+        char symbolChar = symbol.symbol;
+
+        findAdjacentNumbers(symbols, schematic, symbolPosX, symbolPosY, partNumbers);
+    }
+    total = findSum(partNumbers);
+
+    return total;
+}
+
+// Finds sum of products of 2 or more part numbers which are adjacent to a gear '*'
+int runPartTwo(const std::string& filename)
+{
+    std::vector<int> gearNumbers;
+
+    int total = 0;
+
+    std::vector<std::string> schematic = readLinesFromFile(filename);
+    std::vector<Symbol> symbols = findSymbolPositions(schematic);
+    for (auto symbol : symbols)
+    {
+        int symbolPosX = symbol.posX;
+        int symbolPosY = symbol.posY;
+        char symbolChar = symbol.symbol;
+        gearNumbers.clear();
+
+        if (symbolChar == '*')
+        {
+            findAdjacentNumbers(symbols, schematic, symbolPosX, symbolPosY, gearNumbers);
+
+            if (gearNumbers.size() > 1)
+            {
+                total += findProduct(gearNumbers);
+                gearNumbers.clear();
+            }
+        }
+    }
+    
     return total;
 }
 
@@ -263,11 +319,9 @@ int main()
 {
     std::string filename = "aoc3.txt";
     // std::string outfile = "aoc3debug.txt"; // FOR DEBUG
-    std::vector<int> numbers;
-    std::vector<std::string> schematic = readLinesFromFile(filename);
-    std::vector<Symbol> symbols = findSymbolPositions(schematic);
-    findAdjacentNumbers(symbols, schematic, numbers);
-    int total = findSum(numbers);
+
+    int partOne = runPartOne(filename);
+    int partTwo = runPartTwo(filename);
 
     // writeVectorToFile(schematic, outfile); // FOR DEBUG
 	return 0;
