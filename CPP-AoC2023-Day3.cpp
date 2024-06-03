@@ -88,7 +88,7 @@ int findCompleteNumber(const std::vector<std::string>& schematic, int posX, int 
     {
         char nextChar = currentLine[posX + 1];
         number += currentChar;
-        // schematic[posY][posX] = 'F'; // FOR DEBUG (replaces all "spent" numbers with F's in the vector to be printed and visually analysed)
+        // schematic[posY][posX] = 'X'; // FOR DEBUG (replaces all "spent" numbers with X's in the vector to be printed and visually analysed)
 
         if (!isdigit(nextChar))
         {
@@ -277,7 +277,7 @@ int runPartOne(const std::string& filename)
         int symbolPosY = symbol.posY;
         char symbolChar = symbol.symbol;
 
-        findAdjacentNumbers(symbols, schematic, symbolPosX, symbolPosY, partNumbers);
+        findAdjacentNumbers(schematic, symbolPosX, symbolPosY, partNumbers);
     }
     total = findSum(partNumbers);
 
@@ -302,7 +302,7 @@ int runPartTwo(const std::string& filename)
 
         if (symbolChar == '*')
         {
-            findAdjacentNumbers(symbols, schematic, symbolPosX, symbolPosY, gearNumbers);
+            findAdjacentNumbers(schematic, symbolPosX, symbolPosY, gearNumbers);
 
             if (gearNumbers.size() > 1)
             {
